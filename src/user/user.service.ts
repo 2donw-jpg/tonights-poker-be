@@ -15,8 +15,8 @@ export class UserService {
     return user;
   }
 
-  getUser(socketId: string): UserSession | undefined {
-    return this.users.get(socketId);
+  getUser(id: string): UserSession | undefined {
+    return this.users.get(id);
   }
 
   removeUser(socketId: string): void {
@@ -31,5 +31,9 @@ export class UserService {
 
   private pick(arr: string[]) {
     return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  listUsers() {
+    return this.users;
   }
 }

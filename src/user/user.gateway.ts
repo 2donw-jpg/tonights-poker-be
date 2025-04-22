@@ -5,13 +5,17 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   MessageBody,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { UserService } from './user.service';
 import { UserSession } from './interfaces/user.interface';
 
 @WebSocketGateway({ cors: true })
 export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server: Server;
+
   constructor(private readonly userService: UserService) {}
 
   handleConnection(@ConnectedSocket() client: Socket) {
@@ -43,8 +47,9 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('getUserInfo')
   handleGetUserInfo(@ConnectedSocket() client: Socket): UserSession | string {
-    console.log('Fuck you: ', client.id)
-    return this.userService.getUser(client.id) || 'null';
+    const user = this.userService.getUser(client.id) || 'null';
+    client.emit('userInfo', user);
+    return user;
   }
 
   @SubscribeMessage('updateName')
@@ -54,9 +59,20 @@ export class UserGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ): UserSession | null {
     const user = this.userService.getUser(client.id);
     if (!user) return null;
-
     user.name = data.name;
     client.emit('userInfo', user);
     return user;
+  }
+
+  @SubscribeMessage('listPartipants')
+  handleListParticipants(
+    @ConnectedSocket() client: Socket,
+  ): Map<string, UserSession> | null {
+    const users = this.userService.listUsers();
+    const usersArray = Array.from(users.values());
+    console.log('List of users (server):', usersArray);
+    client.emit('participantsList', usersArray);
+
+    return users;
   }
 }
